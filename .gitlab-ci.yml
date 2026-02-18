@@ -1,0 +1,88 @@
+image: node:18
+
+stages:
+  - security
+  - build
+  - test
+
+variables:
+  SNYK_SEVERITY_THRESHOLD: medium
+
+before_script:
+  - echo "Starting CI Pipeline"
+  - npm install -g snyk
+  - snyk auth "$SNYK_TOKEN"
+
+after_script:
+  - echo "Pipeline stage completed"
+
+
+snyk_sca:
+  stage: security
+  script:
+    - echo "Running Snyk SCA (dependencies)"
+    - cd backend
+    - npm install
+    - snyk test --severity-threshold=$SNYK_SEVERITY_THRESHOLD
+  artifacts:
+    when: always
+    reports:
+      dependency_scanning: snyk-report.json
+    paths:
+      - backend/node_modules/
+
+snyk_sast:
+  stage: security
+  script:
+    - echo "Running Snyk SAST"
+    - snyk code test
+  artifacts:
+    when: always
+    paths:
+      - .snyk/
+      - snyk-code-report.json
+
+snyk_sbom:
+  stage: security
+  script:
+    - echo "Generating SBOM"
+    - cd backend
+    - snyk sbom --format=cyclonedx1.4 --output=sbom-backend.json
+  artifacts:
+    when: always
+    paths:
+      - backend/sbom-backend.json
+
+docker_build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - docker info
+  script:
+    - docker build -t prescripto-backend ./backend
+    - docker build -t prescripto-frontend ./Frontend
+    - docker build -t prescripto-admin ./admin
+
+snyk_container_scan:
+  stage: test
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - apk add --no-cache npm
+    - npm install -g snyk
+    - snyk auth "$SNYK_TOKEN"
+  script:
+    - snyk container test prescripto-backend --severity-threshold=medium
+    - snyk container test prescripto-frontend --severity-threshold=medium
+    - snyk container test prescripto-admin --severity-threshold=medium
+  artifacts:
+    when: always
+    paths:
+      - snyk-container-report.json
