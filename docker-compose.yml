@@ -1,16 +1,17 @@
 version: "3.9"
 
-services:
+services: 
   backend:
     build: ./backend
     container_name: prescripto_backend
     ports:
       - "4000:4000"
-    env_file:
-      - ./backend/.env
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/prescripto
+      - RAZORPAY_KEY_ID=your_key_id
+      - RAZORPAY_KEY_SECRET=your_secret
     depends_on:
       - mongo
-
   frontend:
     build: ./Frontend
     container_name: prescripto_frontend
