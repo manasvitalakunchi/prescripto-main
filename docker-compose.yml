@@ -8,8 +8,8 @@ services:
   ports:
     - "4000:4000"
   environment:
-    - RAZORPAY_KEY_ID=dummy_key
-    - RAZORPAY_KEY_SECRET=dummy_secret
+    - RAZORPAY_KEY_ID=dummy
+    - RAZORPAY_KEY_SECRET=dummy
     - MONGODB_URI=mongodb://mongo:27017/prescripto
   depends_on:
     - mongo
